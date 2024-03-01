@@ -3,6 +3,7 @@ package dbg
 import (
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 
 	"github.com/davecgh/go-spew/spew"
@@ -45,6 +46,7 @@ func Errorln(msg string) {
 		fmt.Printf("%s", dRed)
 		dbgI.Logger.Println(fm)
 		fmt.Printf("%s", dReset)
+
 	}
 }
 
@@ -56,6 +58,7 @@ func Fatal(msg string) {
 		fmt.Printf("%s", dRed)
 		dbgI.Logger.Fatalln(fm)
 		fmt.Printf("%s", dReset)
+		os.Exit(1)
 	}
 }
 
