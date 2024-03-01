@@ -37,6 +37,28 @@ func Printf(format string, args ...interface{}) {
 	}
 }
 
+func Errorln(msg string) {
+	if dbgI.Enabled {
+		_, filename, line, _ := runtime.Caller(1)
+		dbgI.Logger.SetPrefix("[ERROR] ")
+		fm := fmt.Sprintf("%s:%d\n\t%s", filename, line, msg)
+		fmt.Printf("%s", dRed)
+		dbgI.Logger.Println(fm)
+		fmt.Printf("%s", dReset)
+	}
+}
+
+func Fatal(msg string) {
+	if dbgI.Enabled {
+		_, filename, line, _ := runtime.Caller(1)
+		dbgI.Logger.SetPrefix("[FATAL] ")
+		fm := fmt.Sprintf("%s:%d\n\t%s", filename, line, msg)
+		fmt.Printf("%s", dRed)
+		dbgI.Logger.Fatalln(fm)
+		fmt.Printf("%s", dReset)
+	}
+}
+
 func Println(msg string) {
 	if dbgI.Enabled {
 		_, filename, line, _ := runtime.Caller(1)
