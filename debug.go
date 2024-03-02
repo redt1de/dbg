@@ -2,7 +2,6 @@ package dbg
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 
@@ -20,76 +19,91 @@ var dGray = "\033[37m"
 var dWhite = "\033[97m"
 
 type debugLogger struct {
-	*log.Logger
-	Enabled bool
+	Debug bool
+	Trace bool
 }
 
 func newD() *debugLogger {
-	return &debugLogger{log.New(log.Writer(), "[debug] ", log.LstdFlags), false}
+	return &debugLogger{false, false}
 }
+
 func Printf(format string, args ...interface{}) {
-	if dbgI.Enabled {
-		dbgI.Logger.SetPrefix("[debug] ")
-		_, filename, line, _ := runtime.Caller(1)
-		fmt.Printf("%s", dBlue)
-		fm := fmt.Sprintf("%s:%d\n\t%s", filename, line, format)
-		dbgI.Logger.Printf(fm, args...)
+	if dbgI.Debug {
+
+		fmt.Printf("%s[DEBUG] ", dBlue)
+		if dbgI.Trace {
+			_, filename, line, _ := runtime.Caller(1)
+			fmt.Printf("%s:%d\n\t", filename, line)
+		}
+
+		fmt.Printf(format, args...)
 		fmt.Printf("%s", dReset)
 	}
 }
 
-func Errorln(msg string) {
-	if dbgI.Enabled {
-		_, filename, line, _ := runtime.Caller(1)
-		dbgI.Logger.SetPrefix("[ERROR] ")
-		fm := fmt.Sprintf("%s:%d\n\t%s", filename, line, msg)
-		fmt.Printf("%s", dRed)
-		dbgI.Logger.Println(fm)
-		fmt.Printf("%s", dReset)
+func Println(v ...any) {
+	if dbgI.Debug {
+		fmt.Printf("%s[DEBUG] ", dBlue)
+		if dbgI.Trace {
+			_, filename, line, _ := runtime.Caller(1)
+			fmt.Printf("%s:%d\n\t", filename, line)
+		}
 
+		fmt.Println(v...)
+		fmt.Printf("%s", dReset)
 	}
 }
 
-func Fatal(msg string) {
-	if dbgI.Enabled {
+func Errorf(format string, args ...interface{}) {
+	fmt.Printf("%s[ERROR] ", dRed)
+	if dbgI.Trace {
 		_, filename, line, _ := runtime.Caller(1)
-		dbgI.Logger.SetPrefix("[FATAL] ")
-		fm := fmt.Sprintf("%s:%d\n\t%s", filename, line, msg)
-		fmt.Printf("%s", dRed)
-		dbgI.Logger.Fatalln(fm)
-		fmt.Printf("%s", dReset)
-		os.Exit(1)
+		fmt.Printf("%s:%d\n\t", filename, line)
 	}
+
+	fmt.Printf(format, args...)
+	fmt.Printf("%s", dReset)
 }
 
-func Println(msg string) {
-	if dbgI.Enabled {
+func Errorln(v ...any) {
+	fmt.Printf("%s[ERROR] ", dRed)
+	if dbgI.Trace {
 		_, filename, line, _ := runtime.Caller(1)
-		dbgI.Logger.SetPrefix("[debug] ")
-		fm := fmt.Sprintf("%s:%d\n\t%s", filename, line, msg)
-		fmt.Printf("%s", dBlue)
-		dbgI.Logger.Println(fm)
-		fmt.Printf("%s", dReset)
+		fmt.Printf("%s:%d\n\t", filename, line)
 	}
+
+	fmt.Println(v...)
+	fmt.Printf("%s", dReset)
+}
+
+func Fatal(v ...any) {
+	fmt.Printf("%s[FATAL] ", dRed)
+	if dbgI.Trace {
+		_, filename, line, _ := runtime.Caller(1)
+		fmt.Printf("%s:%d\n\t", filename, line)
+	}
+
+	fmt.Println(v...)
+	fmt.Printf("%s", dReset)
+	os.Exit(1)
 }
 
 func Dump(a interface{}) {
-	if dbgI.Enabled {
+	if dbgI.Debug {
+		fmt.Printf("%s[SPEW-DUMP] ", dYellow)
 		_, filename, line, _ := runtime.Caller(1)
-		dbgI.Logger.SetPrefix("[debug-dump] ")
-		fmt.Printf("%s", dBlue)
-		dbgI.Logger.Printf("%s:%d\n", filename, line)
-		fmt.Printf("%s", dReset)
+		fmt.Printf("%s:%d\n", filename, line)
 		spew.Dump(a)
+		fmt.Printf("%s", dReset)
 	}
 }
 
-func Enable() {
-	dbgI.Enabled = true
+func Debug(v bool) {
+	dbgI.Debug = v
 }
 
-func Disable() {
-	dbgI.Enabled = false
+func Trace(v bool) {
+	dbgI.Trace = v
 }
 
 var dbgI = newD()
