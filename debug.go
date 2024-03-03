@@ -1,6 +1,7 @@
 package dbg
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"runtime"
@@ -77,80 +78,79 @@ func (d *dbgLogger) Verbose(v bool) {
 
 func (d *dbgLogger) Printf(format string, args ...interface{}) {
 	if d.enabled {
+		var ver string
+		if d.verbose {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
 		var modnme string
 		if d.name != "" {
 			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 		}
-		fmt.Printf("%s[DEBUG] %s", dBlue, modnme)
-		if d.verbose {
-			_, filename, line, _ := runtime.Caller(1)
-			fmt.Printf("%s:%d\n\t", filename, line)
-		}
-
+		fmt.Printf("%s[DEBUG] %s%s%s", dBlue, modnme, ver, dReset)
 		fmt.Printf(format, args...)
-		fmt.Printf("%s", dReset)
 	}
 }
 
 func (d *dbgLogger) Println(v ...any) {
 	if d.enabled {
+		var ver string
+		if d.verbose {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
 		var modnme string
 		if d.name != "" {
 			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 		}
-		fmt.Printf("%s[DEBUG] %s", dBlue, modnme)
-		if d.verbose {
-			_, filename, line, _ := runtime.Caller(1)
-			fmt.Printf("%s:%d\n\t", filename, line)
-		}
+		fmt.Printf("%s[DEBUG] %s%s%s", dBlue, modnme, ver, dReset)
 
 		fmt.Println(v...)
-		fmt.Printf("%s", dReset)
+
 	}
 }
 func (d *dbgLogger) Errorf(format string, args ...interface{}) {
+	var ver string
+	if d.verbose {
+		_, filename, line, _ := runtime.Caller(1)
+		ver = fmt.Sprintf("[%s:%d] ", filename, line)
+	}
 	var modnme string
 	if d.name != "" {
 		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 	}
-	fmt.Printf("%s[ERROR] %s", dRed, modnme)
-	if d.verbose {
-		_, filename, line, _ := runtime.Caller(1)
-		fmt.Printf("%s:%d\n\t", filename, line)
-	}
-
+	fmt.Printf("%s[ERROR] %s%s%s", dRed, modnme, ver, dReset)
 	fmt.Printf(format, args...)
-	fmt.Printf("%s", dReset)
 }
 
 func (d *dbgLogger) Errorln(v ...any) {
+	var ver string
+	if d.verbose {
+		_, filename, line, _ := runtime.Caller(1)
+		ver = fmt.Sprintf("[%s:%d] ", filename, line)
+	}
 	var modnme string
 	if d.name != "" {
 		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 	}
-	fmt.Printf("%s[ERROR] %s", dRed, modnme)
-	if d.verbose {
-		_, filename, line, _ := runtime.Caller(1)
-		fmt.Printf("%s:%d\n\t", filename, line)
-	}
+	fmt.Printf("%s[ERROR] %s%s%s", dRed, modnme, ver, dReset)
 
 	fmt.Println(v...)
-	fmt.Printf("%s", dReset)
 }
 
 func (d *dbgLogger) Fatal(v ...any) {
+	var ver string
+	if d.verbose {
+		_, filename, line, _ := runtime.Caller(1)
+		ver = fmt.Sprintf("[%s:%d] ", filename, line)
+	}
 	var modnme string
 	if d.name != "" {
 		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 	}
-	fmt.Printf("%s[FATAL] %s", dRed, modnme)
-	if d.verbose {
-		_, filename, line, _ := runtime.Caller(1)
-		fmt.Printf("%s:%d\n\t", filename, line)
-	}
+	fmt.Printf("%s[FATAL] %s%s%s", dRed, modnme, ver, dReset)
 
 	fmt.Println(v...)
-	fmt.Printf("%s", dReset)
 	os.Exit(1)
 }
 
@@ -169,17 +169,44 @@ func (d *dbgLogger) Dump(a interface{}) {
 }
 
 func (d *dbgLogger) TraceErr(err error) {
-	err = tracerr.Wrap(nil)
-	tracerr.PrintSourceColor(err)
+	var ver string
+	if d.verbose {
+		_, filename, line, _ := runtime.Caller(1)
+		ver = fmt.Sprintf("[%s:%d] ", filename, line)
+	}
+	var modnme string
+	if d.name != "" {
+		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+	}
+	fmt.Printf("%s[ERROR-TRACE] %s%s%s%s\n", dRed, modnme, ver, dReset, err.Error())
+
+	///////////////////////////////////////////////
+	err = tracerr.Wrap(err)
+	a := tracerr.SprintSourceColor(err)
+
+	lns := strings.Split(a, "\n")
+	start := false // this is to skip TraceErr() itself, and stop at runtime.main() since we are not really interested in those
+	for _, l := range lns {
+		if strings.Contains(l, "runtime.main()") {
+			fmt.Printf("%s", dReset)
+			break
+		}
+		tmp, _ := hex.DecodeString("1b5b316d2f")
+		if strings.HasPrefix(l, string(tmp)) && !strings.Contains(l, "TraceErr") {
+			start = true
+		}
+		if start {
+			fmt.Println(l)
+		}
+	}
+
 }
 
 func (d *dbgLogger) Trace() {
 	nilError := tracerr.Errorf("%s", "")
 	err := tracerr.Wrap(nilError)
 	tracerr.PrintSourceColor(err)
-	// stackSlice := make([]byte, 512)
-	// s := runtime.Stack(stackSlice, false)
-	// fmt.Printf("\n%s", stackSlice[0:s])
+
 }
 
 // ///////////////////////////////////////////////////////// Global instance ///////////////////////////////////////////////////////////////////

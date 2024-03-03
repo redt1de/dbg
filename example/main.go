@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/redt1de/dbg"
 )
 
@@ -34,6 +36,6 @@ func main() {
 	tl.Errorf("%s\n", "Errorf")
 	tl.Errorln("Errorln")
 	tl.Dump(test{Name: "John", Age: 25})
-	tl.Trace()
-	tl.TraceErr(nil)
+	// tl.Trace()
+	tl.TraceErr(fmt.Errorf("test error"))
 }
