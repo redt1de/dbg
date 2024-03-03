@@ -85,4 +85,5 @@ func main() {
 	testlog.Errorf("%s\n", "global errorf")
 	testlog.Errorln(fakeErr)
 	testlog.Dump("test struct", test{"test", 1})
+	testlog.Warnln("global warnln")
 }

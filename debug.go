@@ -37,6 +37,7 @@ const (
 var dReset = "\033[0m"
 var dRed = "\033[31m"
 var dGreen = "\033[32m"
+var dOrange = "\033[38;5;208m"
 var dYellow = "\033[33m"
 var dBlue = "\033[34m"
 var dPurple = "\033[35m"
@@ -202,7 +203,7 @@ func (d *dbgLogger) Warnf(format string, args ...interface{}) {
 		if d.name != "" {
 			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 		}
-		fmt.Printf("%s[WARN] %s%s%s", dYellow, modnme, ver, dReset)
+		fmt.Printf("%s[WARN] %s%s%s", dOrange, modnme, ver, dReset)
 		fmt.Printf(format, args...)
 	}
 }
@@ -218,7 +219,7 @@ func (d *dbgLogger) Warnln(v ...any) {
 		if d.name != "" {
 			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 		}
-		fmt.Printf("%s[WARN] %s%s%s", dYellow, modnme, ver, dReset)
+		fmt.Printf("%s[WARN] %s%s%s", dOrange, modnme, ver, dReset)
 
 		fmt.Println(v...)
 
