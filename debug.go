@@ -25,9 +25,10 @@ const (
 	LogDumps
 	LogErrTrace
 )
-
-var LogAll = LogSrc | LogInfo | LogWarn | LogError | LogFatal | LogDebug | LogTrace | LogDumps | LogErrTrace
-var LogDefault = LogInfo | LogWarn | LogError | LogFatal
+const (
+	LogAll     = LogSrc | LogInfo | LogWarn | LogError | LogFatal | LogDebug | LogTrace | LogDumps | LogErrTrace
+	LogDefault = LogInfo | LogWarn | LogError | LogFatal | LogDebug | LogWarn | LogDumps
+)
 
 var dReset = "\033[0m"
 var dRed = "\033[31m"
