@@ -15,19 +15,23 @@ import (
 // use verbose for error stack trace
 
 const (
-	LogSrc = 1 << iota
-	LogInfo
+	LogInfo = 1 << iota
 	LogDebug
 	LogWarn
 	LogError
-	LogFatal
-	LogTrace
 	LogDumps
+	LogInfoSrc
+	LogDebugSrc
+	LogWarnSrc
+	LogErrorSrc
+	LogDumpSrc
+	LogTrace
 	LogErrTrace
 )
 const (
-	LogAll     = LogSrc | LogInfo | LogWarn | LogError | LogFatal | LogDebug | LogTrace | LogDumps | LogErrTrace
-	LogDefault = LogInfo | LogWarn | LogError | LogFatal | LogDebug | LogWarn | LogDumps
+	LogAll     = LogInfo | LogWarn | LogError | LogDebug | LogTrace | LogDumps | LogErrTrace | LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc
+	LogDefault = LogInfo | LogWarn | LogError | LogDebug | LogWarn | LogDumps
+	LogWithSrc = LogInfo | LogWarn | LogError | LogDebug | LogWarn | LogDumps | LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc
 )
 
 var dReset = "\033[0m"
@@ -110,11 +114,11 @@ func (d *dbgLogger) Verbose(level int) {
 	case 1:
 		d.Flags = LogError | LogWarn
 	case 2:
-		d.Flags = LogError | LogWarn | LogDebug
-	case 3:
 		d.Flags = LogError | LogWarn | LogDebug | LogInfo
+	case 3:
+		d.Flags = LogError | LogWarn | LogDebug | LogInfo | LogDumps
 	case 4:
-		d.Flags = LogError | LogWarn | LogDebug | LogInfo | LogSrc | LogDumps
+		d.Flags = LogError | LogWarn | LogDebug | LogInfo | LogDumps | LogErrorSrc | LogWarnSrc | LogDebugSrc | LogInfoSrc | LogDumpSrc
 	case 5:
 		d.Flags = LogAll
 	}
@@ -122,7 +126,7 @@ func (d *dbgLogger) Verbose(level int) {
 func (d *dbgLogger) Printf(format string, args ...interface{}) {
 	if d.enabled && d.Flags&LogInfo != 0 {
 		var ver string
-		if d.Flags&LogSrc != 0 {
+		if d.Flags&LogInfoSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -138,7 +142,7 @@ func (d *dbgLogger) Printf(format string, args ...interface{}) {
 func (d *dbgLogger) Println(v ...any) {
 	if d.enabled && d.Flags&LogInfo != 0 {
 		var ver string
-		if d.Flags&LogSrc != 0 {
+		if d.Flags&LogInfoSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -156,7 +160,7 @@ func (d *dbgLogger) Println(v ...any) {
 func (d *dbgLogger) Debugf(format string, args ...interface{}) {
 	if d.enabled && d.Flags&LogDebug != 0 {
 		var ver string
-		if d.Flags&LogSrc != 0 {
+		if d.Flags&LogDebugSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -172,7 +176,7 @@ func (d *dbgLogger) Debugf(format string, args ...interface{}) {
 func (d *dbgLogger) Debugln(v ...any) {
 	if d.enabled && d.Flags&LogDebug != 0 {
 		var ver string
-		if d.Flags&LogSrc != 0 {
+		if d.Flags&LogDebugSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -190,7 +194,7 @@ func (d *dbgLogger) Debugln(v ...any) {
 func (d *dbgLogger) Warnf(format string, args ...interface{}) {
 	if d.enabled && d.Flags&LogWarn != 0 {
 		var ver string
-		if d.Flags&LogSrc != 0 {
+		if d.Flags&LogWarnSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -206,7 +210,7 @@ func (d *dbgLogger) Warnf(format string, args ...interface{}) {
 func (d *dbgLogger) Warnln(v ...any) {
 	if d.enabled && d.Flags&LogWarn != 0 {
 		var ver string
-		if d.Flags&LogSrc != 0 {
+		if d.Flags&LogWarnSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -224,7 +228,7 @@ func (d *dbgLogger) Warnln(v ...any) {
 func (d *dbgLogger) Errorf(format string, args ...interface{}) {
 	if d.enabled && d.Flags&LogError != 0 {
 		var ver string
-		if d.Flags&LogSrc != 0 {
+		if d.Flags&LogErrorSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -240,7 +244,7 @@ func (d *dbgLogger) Errorf(format string, args ...interface{}) {
 func (d *dbgLogger) Errorln(err error) {
 	if d.enabled && d.Flags&LogError != 0 {
 		var ver string
-		if d.Flags&LogSrc != 0 {
+		if d.Flags&LogErrorSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -259,7 +263,7 @@ func (d *dbgLogger) Errorln(err error) {
 func (d *dbgLogger) Fatal(err error) {
 	if d.enabled && d.Flags&LogError != 0 {
 		var ver string
-		if d.Flags&LogSrc != 0 {
+		if d.Flags&LogErrorSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -275,15 +279,19 @@ func (d *dbgLogger) Fatal(err error) {
 	}
 }
 
-func (d *dbgLogger) Dump(a interface{}) {
+func (d *dbgLogger) Dump(note string, a interface{}) {
 	if d.enabled && d.Flags&LogDumps != 0 {
+		var ver string
+		if d.Flags&LogDumpSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
 		var modnme string
 		if d.name != "" {
 			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 		}
-		fmt.Printf("%s[DUMP] %s", dYellow, modnme)
-		_, filename, line, _ := runtime.Caller(1)
-		fmt.Printf("%s:%d\n", filename, line)
+		fmt.Printf("%s[DUMP] %s%s%s\n", dCyan, modnme, ver, note)
+
 		spew.Dump(a)
 		fmt.Printf("%s", dReset)
 	}
@@ -367,8 +375,8 @@ func Fatal(err error) {
 	dbgI.Fatal(err)
 }
 
-func Dump(a interface{}) {
-	dbgI.Dump(a)
+func Dump(note string, a interface{}) {
+	dbgI.Dump(note, a)
 }
 
 func TraceErr(err error) {
