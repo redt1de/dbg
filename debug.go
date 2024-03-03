@@ -31,7 +31,7 @@ const (
 const (
 	LogAll     = LogInfo | LogWarn | LogError | LogDebug | LogTrace | LogDumps | LogErrTrace | LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc
 	LogDefault = LogInfo | LogWarn | LogError | LogDebug | LogWarn | LogDumps
-	LogWithSrc = LogInfo | LogWarn | LogError | LogDebug | LogWarn | LogDumps | LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc
+	LogWithSrc = LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc
 )
 
 var dReset = "\033[0m"
@@ -279,8 +279,17 @@ func (d *dbgLogger) Fatal(err error) {
 	}
 }
 
-func (d *dbgLogger) Dump(note string, a interface{}) {
+func (d *dbgLogger) Dump(a ...interface{}) {
 	if d.enabled && d.Flags&LogDumps != 0 {
+		var note string
+		if len(a) > 1 {
+			switch a[0].(type) {
+			case string:
+				note = a[0].(string)
+				a = a[1:]
+			}
+		}
+
 		var ver string
 		if d.Flags&LogDumpSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
@@ -290,9 +299,9 @@ func (d *dbgLogger) Dump(note string, a interface{}) {
 		if d.name != "" {
 			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 		}
-		fmt.Printf("%s[DUMP] %s%s%s\n", dCyan, modnme, ver, note)
+		fmt.Printf("%s[DUMP] %s%s%s\n", dYellow, modnme, ver, note)
 
-		spew.Dump(a)
+		spew.Dump(a...)
 		fmt.Printf("%s", dReset)
 	}
 }
@@ -375,8 +384,8 @@ func Fatal(err error) {
 	dbgI.Fatal(err)
 }
 
-func Dump(note string, a interface{}) {
-	dbgI.Dump(note, a)
+func Dump(a ...interface{}) {
+	dbgI.Dump(a...)
 }
 
 func TraceErr(err error) {
