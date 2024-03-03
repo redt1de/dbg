@@ -45,9 +45,10 @@ func Get(name string) *dbgLogger {
 
 // SetAll sets all loggers to the same state
 func SetAll(enabled, verbose bool) {
-	for _, v := range loggerMap {
+	for k, v := range loggerMap {
 		v.enabled = enabled
 		v.verbose = verbose
+		loggerMap[k] = v
 	}
 	dbgI.enabled = enabled
 	dbgI.verbose = verbose
