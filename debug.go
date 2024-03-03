@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/ztrue/tracerr"
 )
 
 var dReset = "\033[0m"
@@ -18,20 +20,58 @@ var dCyan = "\033[36m"
 var dGray = "\033[37m"
 var dWhite = "\033[97m"
 
-type debugLogger struct {
-	Debug bool
-	Trace bool
+type dbgLogger struct {
+	name    string
+	enabled bool
+	verbose bool
 }
 
-func newD() *debugLogger {
-	return &debugLogger{false, false}
+type lm map[string]*dbgLogger
+
+var loggerMap = make(lm)
+
+// get a named logger or create a new one
+func Get(name string) *dbgLogger {
+	found, ok := loggerMap[name]
+	if !ok {
+		found = newD(name)
+		loggerMap[name] = found
+	}
+	return found
 }
 
-func Printf(format string, args ...interface{}) {
-	if dbgI.Debug {
+// SetAll sets all loggers to the same state
+func SetAll(enabled, verbose bool) {
+	for _, v := range loggerMap {
+		v.enabled = enabled
+		v.verbose = verbose
+	}
+	dbgI.enabled = enabled
+	dbgI.verbose = verbose
+}
 
-		fmt.Printf("%s[DEBUG] ", dBlue)
-		if dbgI.Trace {
+func newD(name string) *dbgLogger {
+	return &dbgLogger{name, false, false}
+}
+
+// Enable debug output
+func (d *dbgLogger) Enable(v bool) {
+	d.enabled = v
+}
+
+// Enable verbose debug output, includes file and line number
+func (d *dbgLogger) Verbose(v bool) {
+	d.verbose = v
+}
+
+func (d *dbgLogger) Printf(format string, args ...interface{}) {
+	if d.enabled {
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[DEBUG] %s", dBlue, modnme)
+		if d.verbose {
 			_, filename, line, _ := runtime.Caller(1)
 			fmt.Printf("%s:%d\n\t", filename, line)
 		}
@@ -41,10 +81,14 @@ func Printf(format string, args ...interface{}) {
 	}
 }
 
-func Println(v ...any) {
-	if dbgI.Debug {
-		fmt.Printf("%s[DEBUG] ", dBlue)
-		if dbgI.Trace {
+func (d *dbgLogger) Println(v ...any) {
+	if d.enabled {
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[DEBUG] %s", dBlue, modnme)
+		if d.verbose {
 			_, filename, line, _ := runtime.Caller(1)
 			fmt.Printf("%s:%d\n\t", filename, line)
 		}
@@ -53,10 +97,13 @@ func Println(v ...any) {
 		fmt.Printf("%s", dReset)
 	}
 }
-
-func Errorf(format string, args ...interface{}) {
-	fmt.Printf("%s[ERROR] ", dRed)
-	if dbgI.Trace {
+func (d *dbgLogger) Errorf(format string, args ...interface{}) {
+	var modnme string
+	if d.name != "" {
+		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+	}
+	fmt.Printf("%s[ERROR] %s", dRed, modnme)
+	if d.verbose {
 		_, filename, line, _ := runtime.Caller(1)
 		fmt.Printf("%s:%d\n\t", filename, line)
 	}
@@ -65,9 +112,13 @@ func Errorf(format string, args ...interface{}) {
 	fmt.Printf("%s", dReset)
 }
 
-func Errorln(v ...any) {
-	fmt.Printf("%s[ERROR] ", dRed)
-	if dbgI.Trace {
+func (d *dbgLogger) Errorln(v ...any) {
+	var modnme string
+	if d.name != "" {
+		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+	}
+	fmt.Printf("%s[ERROR] %s", dRed, modnme)
+	if d.verbose {
 		_, filename, line, _ := runtime.Caller(1)
 		fmt.Printf("%s:%d\n\t", filename, line)
 	}
@@ -76,9 +127,13 @@ func Errorln(v ...any) {
 	fmt.Printf("%s", dReset)
 }
 
-func Fatal(v ...any) {
-	fmt.Printf("%s[FATAL] ", dRed)
-	if dbgI.Trace {
+func (d *dbgLogger) Fatal(v ...any) {
+	var modnme string
+	if d.name != "" {
+		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+	}
+	fmt.Printf("%s[FATAL] %s", dRed, modnme)
+	if d.verbose {
 		_, filename, line, _ := runtime.Caller(1)
 		fmt.Printf("%s:%d\n\t", filename, line)
 	}
@@ -88,9 +143,13 @@ func Fatal(v ...any) {
 	os.Exit(1)
 }
 
-func Dump(a interface{}) {
-	if dbgI.Debug {
-		fmt.Printf("%s[SPEW-DUMP] ", dYellow)
+func (d *dbgLogger) Dump(a interface{}) {
+	if d.enabled {
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[DUMP] %s", dYellow, modnme)
 		_, filename, line, _ := runtime.Caller(1)
 		fmt.Printf("%s:%d\n", filename, line)
 		spew.Dump(a)
@@ -98,12 +157,62 @@ func Dump(a interface{}) {
 	}
 }
 
-func Debug(v bool) {
-	dbgI.Debug = v
+func (d *dbgLogger) TraceErr(err error) {
+	err = tracerr.Wrap(nil)
+	tracerr.PrintSourceColor(err)
 }
 
-func Trace(v bool) {
-	dbgI.Trace = v
+func (d *dbgLogger) Trace() {
+	nilError := tracerr.Errorf("%s", "")
+	err := tracerr.Wrap(nilError)
+	tracerr.PrintSourceColor(err)
+	// stackSlice := make([]byte, 512)
+	// s := runtime.Stack(stackSlice, false)
+	// fmt.Printf("\n%s", stackSlice[0:s])
 }
 
-var dbgI = newD()
+// ///////////////////////////////////////////////////////// Global instance ///////////////////////////////////////////////////////////////////
+func Printf(format string, args ...interface{}) {
+	dbgI.Printf(format, args...)
+}
+
+func Println(v ...any) {
+	dbgI.Println(v...)
+}
+
+func Errorf(format string, args ...interface{}) {
+	dbgI.Errorf(format, args...)
+}
+
+func Errorln(v ...any) {
+	dbgI.Errorln(v...)
+}
+
+func Fatal(v ...any) {
+	dbgI.Fatal(v...)
+}
+
+func Dump(a interface{}) {
+	dbgI.Dump(a)
+}
+
+func TraceErr(err error) {
+	dbgI.TraceErr(err)
+}
+
+func Trace() {
+	dbgI.Trace()
+}
+
+// Enable debug output
+func Enable(v bool) {
+	dbgI.enabled = v
+}
+
+// Enable verbose debug output, includes file and line number
+func Verbose(v bool) {
+	dbgI.verbose = v
+}
+
+// builtin global instance
+var dbgI = newD("")
