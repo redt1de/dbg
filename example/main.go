@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"os"
 
 	"github.com/redt1de/dbg"
 )
@@ -11,31 +11,47 @@ type test struct {
 	Age  int
 }
 
+var testlog = dbg.Get("test")
+
 func main() {
+	_, fakeErr := os.ReadFile("fakefile")
+	dbg.Printf("%s\n", "global printf")
+	dbg.Println("global println")
+	dbg.Debugf("%s\n", "global debugf")
+	dbg.Debugln("global  debugln")
+	dbg.Warnf("%s\n", "global warnf")
+	dbg.Warnln("global warnln")
+	dbg.Errorf("%s,%s\n", "global errorf", fakeErr)
+	dbg.Errorln(fakeErr)
+	////////////////////////////////
+	testlog.Printf("%s\n", "global printf")
+	testlog.Println("global println")
+	testlog.Debugf("%s\n", "global debugf")
+	testlog.Debugln("global  debugln")
+	testlog.Warnf("%s\n", "global warnf")
+	testlog.Warnln("global warnln")
+	testlog.Errorf("%s\n", "global errorf")
+	testlog.Errorln(fakeErr)
 
-	dbg.Enable(true)
-	dbg.Printf("%s\n", "Printf")
-	dbg.Println("Println")
-	dbg.Errorf("%s\n", "Errorf")
-	dbg.Errorln("Errorln")
-	dbg.Dump(test{Name: "John", Age: 25})
+	dbg.SetByName("test", true, dbg.LogError|dbg.LogWarn|dbg.LogSrc)
 
-	dbg.Verbose(true)
-	dbg.Printf("%s\n", "Printf verbose")
-	dbg.Println("Println verbose")
-	dbg.Errorf("%s\n", "Errorf verbose")
-	dbg.Errorln("Errorln verbose")
-	// dbg.Fatal("Fatal Goodbye,Cruel World!")
+	dbg.Printf("%s\n", "global printf")
+	dbg.Println("global println")
+	dbg.Debugf("%s\n", "global debugf")
+	dbg.Debugln("global  debugln")
+	dbg.Warnf("%s\n", "global warnf")
+	dbg.Warnln("global warnln")
+	dbg.Errorf("%s\n", "global errorf")
+	dbg.Errorln(fakeErr)
+	////////////////////////////////
 
-	// named logger
-	tl := dbg.Get("test")
-	tl.Enable(true)
-	tl.Verbose(true)
-	tl.Printf("%s\n", "Printf")
-	tl.Println("Println")
-	tl.Errorf("%s\n", "Errorf")
-	tl.Errorln("Errorln")
-	tl.Dump(test{Name: "John", Age: 25})
-	// tl.Trace()
-	tl.TraceErr(fmt.Errorf("test error"))
+	testlog.Verbose(5)
+	testlog.Printf("%s\n", "global printf")
+	testlog.Println("global println")
+	testlog.Debugf("%s\n", "global debugf")
+	testlog.Debugln("global  debugln")
+	testlog.Warnf("%s\n", "global warnf")
+	testlog.Warnln("global warnln")
+	testlog.Errorf("%s\n", "global errorf")
+	testlog.Errorln(fakeErr)
 }

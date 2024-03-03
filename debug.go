@@ -11,6 +11,24 @@ import (
 	"github.com/ztrue/tracerr"
 )
 
+// TODO:
+// use verbose for error stack trace
+
+const (
+	LogSrc = 1 << iota
+	LogInfo
+	LogDebug
+	LogWarn
+	LogError
+	LogFatal
+	LogTrace
+	LogDumps
+	LogErrTrace
+)
+
+var LogAll = LogSrc | LogInfo | LogWarn | LogError | LogFatal | LogDebug | LogTrace | LogDumps | LogErrTrace
+var LogDefault = LogInfo | LogWarn | LogError | LogFatal
+
 var dReset = "\033[0m"
 var dRed = "\033[31m"
 var dGreen = "\033[32m"
@@ -24,7 +42,7 @@ var dWhite = "\033[97m"
 type dbgLogger struct {
 	name    string
 	enabled bool
-	verbose bool
+	Flags   int
 }
 
 type lm map[string]*dbgLogger
@@ -40,46 +58,104 @@ func Get(name string) *dbgLogger {
 	return found
 }
 
-func Set(namedlogger string, enabled, verbose bool) error {
+func SetByName(namedlogger string, enabled bool, flags int) error {
 	if _, ok := loggerMap[namedlogger]; !ok {
 		return fmt.Errorf("logger %s not found", namedlogger)
 	}
 	loggerMap[namedlogger].enabled = enabled
-	loggerMap[namedlogger].verbose = verbose
+	loggerMap[namedlogger].Flags = flags
 	return nil
 }
 
 // SetAll sets all loggers to the same state
-func SetAll(enabled, verbose bool) {
+func SetAll(enabled bool, flags int) {
 	for k, v := range loggerMap {
 		v.enabled = enabled
-		v.verbose = verbose
+		v.Flags = flags
 		loggerMap[k] = v
 	}
 	dbgI.enabled = enabled
-	dbgI.verbose = verbose
+	dbgI.Flags = flags
 }
 
 func newD(name string) *dbgLogger {
-	n := &dbgLogger{name, false, false}
+	n := &dbgLogger{name, true, LogDefault}
 	loggerMap[name] = n
 	return n
 }
 
 // Enable debug output
-func (d *dbgLogger) Enable(v bool) {
+func (d *dbgLogger) Enabled(v bool) {
 	d.enabled = v
 }
 
-// Enable verbose debug output, includes file and line number
-func (d *dbgLogger) Verbose(v bool) {
-	d.verbose = v
+// Enable verbose output
+func (d *dbgLogger) MaxVerbose(v bool) {
+	d.Flags = LogAll
 }
 
+func (d *dbgLogger) SetFlags(flags int) {
+	d.Flags = flags
+}
+
+func (d *dbgLogger) Verbose(level int) {
+	if level > 5 {
+		level = 5
+	}
+	if level <= 0 {
+		d.enabled = false
+	}
+	switch level {
+	case 1:
+		d.Flags = LogError | LogWarn
+	case 2:
+		d.Flags = LogError | LogWarn | LogDebug
+	case 3:
+		d.Flags = LogError | LogWarn | LogDebug | LogInfo
+	case 4:
+		d.Flags = LogError | LogWarn | LogDebug | LogInfo | LogSrc | LogDumps
+	case 5:
+		d.Flags = LogAll
+	}
+}
 func (d *dbgLogger) Printf(format string, args ...interface{}) {
-	if d.enabled {
+	if d.enabled && d.Flags&LogInfo != 0 {
 		var ver string
-		if d.verbose {
+		if d.Flags&LogSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[INFO] %s%s%s", dWhite, modnme, ver, dReset)
+		fmt.Printf(format, args...)
+	}
+}
+
+func (d *dbgLogger) Println(v ...any) {
+	if d.enabled && d.Flags&LogInfo != 0 {
+		var ver string
+		if d.Flags&LogSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[INFO] %s%s%s", dWhite, modnme, ver, dReset)
+
+		fmt.Println(v...)
+
+	}
+}
+
+func (d *dbgLogger) Debugf(format string, args ...interface{}) {
+	if d.enabled && d.Flags&LogDebug != 0 {
+		var ver string
+		if d.Flags&LogSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -92,10 +168,10 @@ func (d *dbgLogger) Printf(format string, args ...interface{}) {
 	}
 }
 
-func (d *dbgLogger) Println(v ...any) {
-	if d.enabled {
+func (d *dbgLogger) Debugln(v ...any) {
+	if d.enabled && d.Flags&LogDebug != 0 {
 		var ver string
-		if d.verbose {
+		if d.Flags&LogSrc != 0 {
 			_, filename, line, _ := runtime.Caller(1)
 			ver = fmt.Sprintf("[%s:%d] ", filename, line)
 		}
@@ -109,53 +185,97 @@ func (d *dbgLogger) Println(v ...any) {
 
 	}
 }
+
+func (d *dbgLogger) Warnf(format string, args ...interface{}) {
+	if d.enabled && d.Flags&LogWarn != 0 {
+		var ver string
+		if d.Flags&LogSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[WARN] %s%s%s", dYellow, modnme, ver, dReset)
+		fmt.Printf(format, args...)
+	}
+}
+
+func (d *dbgLogger) Warnln(v ...any) {
+	if d.enabled && d.Flags&LogWarn != 0 {
+		var ver string
+		if d.Flags&LogSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[WARN] %s%s%s", dYellow, modnme, ver, dReset)
+
+		fmt.Println(v...)
+
+	}
+}
+
 func (d *dbgLogger) Errorf(format string, args ...interface{}) {
-	var ver string
-	if d.verbose {
-		_, filename, line, _ := runtime.Caller(1)
-		ver = fmt.Sprintf("[%s:%d] ", filename, line)
+	if d.enabled && d.Flags&LogError != 0 {
+		var ver string
+		if d.Flags&LogSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[ERROR] %s%s%s", dRed, modnme, ver, dReset)
+		fmt.Printf(format, args...)
 	}
-	var modnme string
-	if d.name != "" {
-		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
-	}
-	fmt.Printf("%s[ERROR] %s%s%s", dRed, modnme, ver, dReset)
-	fmt.Printf(format, args...)
 }
 
-func (d *dbgLogger) Errorln(v ...any) {
-	var ver string
-	if d.verbose {
-		_, filename, line, _ := runtime.Caller(1)
-		ver = fmt.Sprintf("[%s:%d] ", filename, line)
-	}
-	var modnme string
-	if d.name != "" {
-		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
-	}
-	fmt.Printf("%s[ERROR] %s%s%s", dRed, modnme, ver, dReset)
+func (d *dbgLogger) Errorln(err error) {
+	if d.enabled && d.Flags&LogError != 0 {
+		var ver string
+		if d.Flags&LogSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[ERROR] %s%s%s", dRed, modnme, ver, dReset)
 
-	fmt.Println(v...)
+		fmt.Println(err)
+		d.TraceErr(err)
+
+	}
 }
 
-func (d *dbgLogger) Fatal(v ...any) {
-	var ver string
-	if d.verbose {
-		_, filename, line, _ := runtime.Caller(1)
-		ver = fmt.Sprintf("[%s:%d] ", filename, line)
-	}
-	var modnme string
-	if d.name != "" {
-		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
-	}
-	fmt.Printf("%s[FATAL] %s%s%s", dRed, modnme, ver, dReset)
+func (d *dbgLogger) Fatal(err error) {
+	if d.enabled && d.Flags&LogError != 0 {
+		var ver string
+		if d.Flags&LogSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[Fatal] %s%s%s", dRed, modnme, ver, dReset)
+		fmt.Println(err)
+		d.TraceErr(err)
+		os.Exit(1)
 
-	fmt.Println(v...)
-	os.Exit(1)
+	}
 }
 
 func (d *dbgLogger) Dump(a interface{}) {
-	if d.enabled {
+	if d.enabled && d.Flags&LogDumps != 0 {
 		var modnme string
 		if d.name != "" {
 			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
@@ -169,34 +289,36 @@ func (d *dbgLogger) Dump(a interface{}) {
 }
 
 func (d *dbgLogger) TraceErr(err error) {
-	var ver string
-	if d.verbose {
-		_, filename, line, _ := runtime.Caller(1)
-		ver = fmt.Sprintf("[%s:%d] ", filename, line)
-	}
-	var modnme string
-	if d.name != "" {
-		modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
-	}
-	fmt.Printf("%s[ERROR-TRACE] %s%s%s%s\n", dRed, modnme, ver, dReset, err.Error())
+	// var ver string
+	// if d.Flags&LogSrc != 0 {
+	// 	_, filename, line, _ := runtime.Caller(1)
+	// 	ver = fmt.Sprintf("[%s:%d] ", filename, line)
+	// }
+	// var modnme string
+	// if d.name != "" {
+	// 	modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+	// }
+	// fmt.Printf("%s[ERROR-TRACE] %s%s%s%s\n", dRed, modnme, ver, dReset, err.Error())
 
 	///////////////////////////////////////////////
-	err = tracerr.Wrap(err)
-	a := tracerr.SprintSourceColor(err)
+	if d.Flags&LogErrTrace != 0 {
+		err = tracerr.Wrap(err)
+		a := tracerr.SprintSourceColor(err)
 
-	lns := strings.Split(a, "\n")
-	start := false // this is to skip TraceErr() itself, and stop at runtime.main() since we are not really interested in those
-	for _, l := range lns {
-		// if strings.Contains(l, "runtime.main()") {
-		// 	fmt.Printf("%s", dReset)
-		// 	break
-		// }
-		tmp, _ := hex.DecodeString("1b5b316d2f")
-		if strings.HasPrefix(l, string(tmp)) && !strings.Contains(l, "TraceErr") {
-			start = true
-		}
-		if start {
-			fmt.Println(l)
+		lns := strings.Split(a, "\n")
+		start := false // this is to skip TraceErr() itself, and stop at runtime.main() since we are not really interested in those
+		for _, l := range lns {
+			// if strings.Contains(l, "runtime.main()") {
+			// 	fmt.Printf("%s", dReset)
+			// 	break
+			// }
+			tmp, _ := hex.DecodeString("1b5b316d2f")
+			if strings.HasPrefix(l, string(tmp)) && !strings.Contains(l, "TraceErr") {
+				start = true
+			}
+			if start {
+				fmt.Println(l)
+			}
 		}
 	}
 
@@ -218,16 +340,30 @@ func Println(v ...any) {
 	dbgI.Println(v...)
 }
 
+func Debugf(format string, args ...interface{}) {
+	dbgI.Debugf(format, args...)
+}
+
+func Debugln(v ...any) {
+	dbgI.Debugln(v...)
+}
+func Warnf(format string, args ...interface{}) {
+	dbgI.Warnf(format, args...)
+}
+
+func Warnln(v ...any) {
+	dbgI.Warnln(v...)
+}
 func Errorf(format string, args ...interface{}) {
 	dbgI.Errorf(format, args...)
 }
 
-func Errorln(v ...any) {
-	dbgI.Errorln(v...)
+func Errorln(err error) {
+	dbgI.Errorln(err)
 }
 
-func Fatal(v ...any) {
-	dbgI.Fatal(v...)
+func Fatal(err error) {
+	dbgI.Fatal(err)
 }
 
 func Dump(a interface{}) {
@@ -249,7 +385,7 @@ func Enable(v bool) {
 
 // Enable verbose debug output, includes file and line number
 func Verbose(v bool) {
-	dbgI.verbose = v
+	dbgI.Flags = LogAll
 }
 
 // builtin global instance
