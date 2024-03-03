@@ -30,10 +30,6 @@ type lm map[string]*dbgLogger
 
 var loggerMap = make(lm)
 
-func New(name string) *dbgLogger {
-	return newD(name)
-}
-
 // get a named logger or create a new one
 func Get(name string) *dbgLogger {
 	found, ok := loggerMap[name]
