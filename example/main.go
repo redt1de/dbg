@@ -34,4 +34,6 @@ func main() {
 	tl.Errorf("%s\n", "Errorf")
 	tl.Errorln("Errorln")
 	tl.Dump(test{Name: "John", Age: 25})
+	tl.Trace()
+	tl.TraceErr(nil)
 }

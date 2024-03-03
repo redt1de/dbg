@@ -30,12 +30,15 @@ type lm map[string]*dbgLogger
 
 var loggerMap = make(lm)
 
+func New(name string) *dbgLogger {
+	return newD(name)
+}
+
 // get a named logger or create a new one
 func Get(name string) *dbgLogger {
 	found, ok := loggerMap[name]
 	if !ok {
 		found = newD(name)
-		loggerMap[name] = found
 	}
 	return found
 }
@@ -51,7 +54,9 @@ func SetAll(enabled, verbose bool) {
 }
 
 func newD(name string) *dbgLogger {
-	return &dbgLogger{name, false, false}
+	n := &dbgLogger{name, false, false}
+	loggerMap[name] = n
+	return n
 }
 
 // Enable debug output
