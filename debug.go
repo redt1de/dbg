@@ -39,6 +39,15 @@ func Get(name string) *dbgLogger {
 	return found
 }
 
+func Set(namedlogger string, enabled, verbose bool) error {
+	if _, ok := loggerMap[namedlogger]; !ok {
+		return fmt.Errorf("logger %s not found", namedlogger)
+	}
+	loggerMap[namedlogger].enabled = enabled
+	loggerMap[namedlogger].verbose = verbose
+	return nil
+}
+
 // SetAll sets all loggers to the same state
 func SetAll(enabled, verbose bool) {
 	for k, v := range loggerMap {
