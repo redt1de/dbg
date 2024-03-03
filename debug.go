@@ -187,10 +187,10 @@ func (d *dbgLogger) TraceErr(err error) {
 	lns := strings.Split(a, "\n")
 	start := false // this is to skip TraceErr() itself, and stop at runtime.main() since we are not really interested in those
 	for _, l := range lns {
-		if strings.Contains(l, "runtime.main()") {
-			fmt.Printf("%s", dReset)
-			break
-		}
+		// if strings.Contains(l, "runtime.main()") {
+		// 	fmt.Printf("%s", dReset)
+		// 	break
+		// }
 		tmp, _ := hex.DecodeString("1b5b316d2f")
 		if strings.HasPrefix(l, string(tmp)) && !strings.Contains(l, "TraceErr") {
 			start = true
