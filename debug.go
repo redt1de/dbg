@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strings"
 
 	"github.com/davecgh/go-spew/spew"
@@ -42,7 +43,10 @@ var dYellow = "\033[33m"
 var dBlue = "\033[34m"
 var dPurple = "\033[35m"
 var dCyan = "\033[36m"
-var dGray = "\033[37m"
+
+// var dGray = "\033[37m"
+var dGray = "\033[38;5;242m"
+
 var dWhite = "\033[97m"
 
 type dbgLogger struct {
@@ -124,6 +128,7 @@ func (d *dbgLogger) Verbose(level int) {
 		d.Flags = LogAll
 	}
 }
+
 func (d *dbgLogger) Printf(format string, args ...interface{}) {
 	if d.enabled && d.Flags&LogInfo != 0 {
 		var ver string
@@ -242,7 +247,7 @@ func (d *dbgLogger) Errorf(format string, args ...interface{}) {
 	}
 }
 
-func (d *dbgLogger) Errorln(err error) {
+func (d *dbgLogger) Errorln(err any) {
 	if d.enabled && d.Flags&LogError != 0 {
 		var ver string
 		if d.Flags&LogErrorSrc != 0 {
@@ -256,7 +261,6 @@ func (d *dbgLogger) Errorln(err error) {
 		fmt.Printf("%s[ERROR] %s%s%s", dRed, modnme, ver, dReset)
 
 		fmt.Println(err)
-		d.TraceErr(err)
 
 	}
 }
@@ -327,10 +331,10 @@ func (d *dbgLogger) TraceErr(err error) {
 		lns := strings.Split(a, "\n")
 		start := false // this is to skip TraceErr() itself, and stop at runtime.main() since we are not really interested in those
 		for _, l := range lns {
-			// if strings.Contains(l, "runtime.main()") {
-			// 	fmt.Printf("%s", dReset)
-			// 	break
-			// }
+			if strings.Contains(l, "runtime.main()") {
+				fmt.Printf("%s", dReset)
+				break
+			}
 			tmp, _ := hex.DecodeString("1b5b316d2f")
 			if strings.HasPrefix(l, string(tmp)) && !strings.Contains(l, "TraceErr") {
 				start = true
@@ -344,10 +348,57 @@ func (d *dbgLogger) TraceErr(err error) {
 }
 
 func (d *dbgLogger) Trace() {
-	nilError := tracerr.Errorf("%s", "")
-	err := tracerr.Wrap(nilError)
-	tracerr.PrintSourceColor(err)
+	var ver string
+	if d.enabled && d.Flags&LogTrace != 0 {
+		_, filename, line, _ := runtime.Caller(1)
+		ver = fmt.Sprintf("[%s:%d] ", filename, line)
 
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[TRACE] %s%s%s\n", dYellow, modnme, ver, dReset)
+
+		stackTrace := debug.Stack()
+		s := string(stackTrace)
+		o := strings.ReplaceAll(s, "\n\t", "%")
+		tmp := strings.Split(o, "\n")
+		indent := ""
+		tmp2 := reverse(tmp)
+		cnt := 0
+		symb := ""
+		for _, l := range tmp2 {
+			if strings.HasPrefix(l, "goroutine") || strings.HasPrefix(l, "runtime/debug.Stack") || strings.HasPrefix(l, "github.com/redt1de/dbg") {
+				continue
+			}
+			prts := strings.Split(l, "%")
+			if len(prts) < 2 {
+				continue
+			}
+
+			if cnt > 0 {
+				symb = "└──> "
+			}
+
+			fn := prts[0]
+			pth := prts[1]
+			fmt.Printf("%s%s%s%s%s  %s[%s]%s\n", dYellow, indent, symb, fn, dReset, dGray, pth, dReset)
+			indent += "    "
+			cnt++
+		}
+	}
+
+}
+func reverse(s []string) []string {
+	a := make([]string, len(s))
+	copy(a, s)
+
+	for i := len(a)/2 - 1; i >= 0; i-- {
+		opp := len(a) - 1 - i
+		a[i], a[opp] = a[opp], a[i]
+	}
+
+	return a
 }
 
 // ///////////////////////////////////////////////////////// Global instance ///////////////////////////////////////////////////////////////////

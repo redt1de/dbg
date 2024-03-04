@@ -13,9 +13,10 @@ type test struct {
 }
 
 var testlog = dbg.Get("test")
+var fakeErr error
 
 func main() {
-	_, fakeErr := os.ReadFile("fakefile")
+	_, fakeErr = os.ReadFile("fakefile")
 	dbg.Printf("%s\n", "global printf")
 	dbg.Println("global println")
 	dbg.Debugf("%s\n", "global debugf")
@@ -86,4 +87,24 @@ func main() {
 	testlog.Errorln(fakeErr)
 	testlog.Dump("test struct", test{"test", 1})
 	testlog.Warnln("global warnln")
+	fmt.Println("--------------- trace -----------------")
+	FuncA()
+
+}
+
+func FuncA() error {
+	a := FuncB()
+	return a
+}
+
+func FuncB() error {
+	b := FuncC()
+	return b
+}
+
+func FuncC() error {
+	testlog.Trace()
+
+	// testlog.TraceErr(fakeErr)
+	return fakeErr
 }
