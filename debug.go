@@ -20,20 +20,22 @@ const (
 	LogDebug
 	LogWarn
 	LogError
+	LogSuccess
 	LogDumps
 	LogInfoSrc
 	LogDebugSrc
 	LogWarnSrc
 	LogErrorSrc
+	LogSuccessSrc
 	LogDumpSrc
 	LogTrace
 	LogTraceVerbose
 	LogErrTrace
 )
 const (
-	LogAll     = LogInfo | LogWarn | LogError | LogDebug | LogTrace | LogDumps | LogErrTrace | LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc | LogTraceVerbose
-	LogDefault = LogInfo | LogWarn | LogError | LogDebug | LogWarn | LogDumps
-	LogWithSrc = LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc
+	LogAll     = LogInfo | LogWarn | LogError | LogDebug | LogTrace | LogDumps | LogErrTrace | LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc | LogTraceVerbose | LogSuccess | LogSuccessSrc
+	LogDefault = LogInfo | LogWarn | LogError | LogDebug | LogWarn | LogDumps | LogSuccess
+	LogWithSrc = LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc | LogSuccessSrc
 )
 
 var dReset = "\033[0m"
@@ -118,13 +120,13 @@ func (d *dbgLogger) Verbose(level int) {
 	}
 	switch level {
 	case 1:
-		d.Flags = LogError | LogWarn
+		d.Flags = LogError | LogWarn | LogSuccess
 	case 2:
-		d.Flags = LogError | LogWarn | LogDebug | LogInfo
+		d.Flags = LogError | LogWarn | LogDebug | LogInfo | LogSuccess
 	case 3:
-		d.Flags = LogError | LogWarn | LogDebug | LogInfo | LogDumps
+		d.Flags = LogError | LogWarn | LogDebug | LogInfo | LogDumps | LogSuccess
 	case 4:
-		d.Flags = LogError | LogWarn | LogDebug | LogInfo | LogDumps | LogErrorSrc | LogWarnSrc | LogDebugSrc | LogInfoSrc | LogDumpSrc
+		d.Flags = LogError | LogWarn | LogDebug | LogInfo | LogDumps | LogErrorSrc | LogWarnSrc | LogDebugSrc | LogInfoSrc | LogDumpSrc | LogSuccess | LogSuccessSrc
 	case 5:
 		d.Flags = LogAll
 	}
@@ -158,6 +160,39 @@ func (d *dbgLogger) Println(v ...any) {
 			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
 		}
 		fmt.Printf("%s[INFO] %s%s%s", dWhite, modnme, ver, dReset)
+
+		fmt.Println(v...)
+
+	}
+}
+func (d *dbgLogger) Successf(format string, args ...interface{}) {
+	if d.enabled && d.Flags&LogSuccess != 0 {
+		var ver string
+		if d.Flags&LogSuccessSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[SUCCESS] %s%s%s", dGreen, modnme, ver, dReset)
+		fmt.Printf(format, args...)
+	}
+}
+
+func (d *dbgLogger) Successln(v ...any) {
+	if d.enabled && d.Flags&LogSuccess != 0 {
+		var ver string
+		if d.Flags&LogSuccessSrc != 0 {
+			_, filename, line, _ := runtime.Caller(1)
+			ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		}
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[SUCCESS] %s%s%s", dGreen, modnme, ver, dReset)
 
 		fmt.Println(v...)
 
@@ -263,6 +298,22 @@ func (d *dbgLogger) Errorln(err any) {
 
 		fmt.Println(err)
 
+	}
+}
+
+func (d *dbgLogger) Pause() {
+	if d.enabled {
+		var ver string
+		_, filename, line, _ := runtime.Caller(1)
+		ver = fmt.Sprintf("[%s:%d] ", filename, line)
+		var modnme string
+		if d.name != "" {
+			modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
+		}
+		fmt.Printf("%s[PAUSE] %s%s%s", dCyan, modnme, ver, dReset)
+		fmt.Println("Press enter to continue...")
+		var input string
+		fmt.Scanln(&input)
 	}
 }
 

@@ -93,6 +93,7 @@ func main() {
 }
 
 func FuncA() error {
+	testlog.Pause()
 	a := FuncB()
 	return a
 }
