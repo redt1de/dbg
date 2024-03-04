@@ -27,10 +27,11 @@ const (
 	LogErrorSrc
 	LogDumpSrc
 	LogTrace
+	LogTraceVerbose
 	LogErrTrace
 )
 const (
-	LogAll     = LogInfo | LogWarn | LogError | LogDebug | LogTrace | LogDumps | LogErrTrace | LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc
+	LogAll     = LogInfo | LogWarn | LogError | LogDebug | LogTrace | LogDumps | LogErrTrace | LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc | LogTraceVerbose
 	LogDefault = LogInfo | LogWarn | LogError | LogDebug | LogWarn | LogDumps
 	LogWithSrc = LogInfoSrc | LogDebugSrc | LogWarnSrc | LogErrorSrc | LogDumpSrc
 )
@@ -312,18 +313,7 @@ func (d *dbgLogger) Dump(a ...interface{}) {
 }
 
 func (d *dbgLogger) TraceErr(err error) {
-	// var ver string
-	// if d.Flags&LogSrc != 0 {
-	// 	_, filename, line, _ := runtime.Caller(1)
-	// 	ver = fmt.Sprintf("[%s:%d] ", filename, line)
-	// }
-	// var modnme string
-	// if d.name != "" {
-	// 	modnme = fmt.Sprintf("[%s] ", strings.ToUpper(d.name))
-	// }
-	// fmt.Printf("%s[ERROR-TRACE] %s%s%s%s\n", dRed, modnme, ver, dReset, err.Error())
 
-	///////////////////////////////////////////////
 	if d.Flags&LogErrTrace != 0 {
 		err = tracerr.Wrap(err)
 		a := tracerr.SprintSourceColor(err)
@@ -382,7 +372,17 @@ func (d *dbgLogger) Trace() {
 
 			fn := prts[0]
 			pth := prts[1]
-			fmt.Printf("%s%s%s%s%s  %s[%s]%s\n", dYellow, indent, symb, fn, dReset, dGray, pth, dReset)
+			if d.Flags&LogTraceVerbose != 0 {
+				fmt.Printf("%s%s%s%s%s  %s[%s]%s\n", dYellow, indent, symb, fn, dReset, dGray, pth, dReset)
+			} else {
+				fmt.Printf("%s%s%s%s%s\n", dYellow, indent, symb, fn, dReset)
+				// if cnt > 0 {
+				// 	fmt.Printf("%s%s%s%s%s\n", dGray, indent, "    ", pth, dReset)
+				// } else {
+				// 	fmt.Printf("%s%s%s%s%s\n", dGray, indent, "", pth, dReset)
+				// }
+			}
+
 			indent += "    "
 			cnt++
 		}
